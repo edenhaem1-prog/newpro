@@ -1,0 +1,11 @@
+{
+  "name": "newpro",
+  "private": true,
+  "scripts": {
+    "postinstall": "cp -r ../index.html ../css ../js ../data .",
+    "start": "serve -s ."
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}

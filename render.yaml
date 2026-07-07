@@ -1,6 +1,7 @@
 services:
   - type: web
     name: newpro
-    runtime: static
-    buildCommand: ""
-    staticPublishPath: .
+    runtime: node
+    rootDir: src
+    buildCommand: npm install
+    startCommand: npm start
