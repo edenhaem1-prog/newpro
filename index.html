@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>תקציב הבית</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>תקציב הבית</h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-view="dashboard">דשבורד</button>
+      <button class="tab-btn" data-view="accounts">חשבונות</button>
+      <button class="tab-btn" data-view="transactions">תנועות</button>
+      <button class="tab-btn" data-view="budget">תקצוב חודשי</button>
+      <button class="tab-btn" data-view="categories">ניהול קטגוריות</button>
+      <button class="tab-btn" data-view="rules">כללים</button>
+      <button class="tab-btn" data-view="schedules">תנועות מתוזמנות</button>
+      <button class="tab-btn" data-view="reports">דוחות</button>
+    </nav>
+  </header>
+
+  <div class="month-bar">
+    <button id="prev-month">◀</button>
+    <span id="current-month-label"></span>
+    <button id="next-month">▶</button>
+  </div>
+
+  <main>
+    <!-- דשבורד -->
+    <section id="view-dashboard" class="view active">
+      <div class="summary-cards" id="summary-cards"></div>
+      <div class="dashboard-body">
+        <table class="budget-table">
+          <thead>
+            <tr><th>קטגוריה</th><th>מתוקצב</th><th>בפועל</th><th>נותר</th></tr>
+          </thead>
+          <tbody id="dashboard-table-body"></tbody>
+        </table>
+        <canvas id="dashboard-pie" width="300" height="300"></canvas>
+      </div>
+    </section>
+
+    <!-- חשבונות -->
+    <section id="view-accounts" class="view">
+      <div id="accounts-list" class="accounts-list"></div>
+      <form id="account-form" class="inline-form">
+        <input type="text" id="account-name" placeholder="שם חשבון חדש" required />
+        <label><input type="checkbox" id="account-offbudget" /> מחוץ לתקציב</label>
+        <button type="submit">הוסף חשבון</button>
+      </form>
+    </section>
+
+    <!-- תנועות (register) -->
+    <section id="view-transactions" class="view">
+      <div class="register-toolbar">
+        <select id="register-account-filter"></select>
+        <button id="reconcile-btn" type="button">התאמת חשבון (Reconciliation)</button>
+      </div>
+
+      <form id="tx-form" class="inline-form">
+        <input type="date" id="tx-date" required />
+        <select id="tx-account" required></select>
+        <select id="tx-payee-select"></select>
+        <input type="text" id="tx-payee-new" placeholder="נהנה חדש (אם לא נבחר למעלה)" />
+        <select id="tx-category"></select>
+        <input type="number" id="tx-amount" step="0.01" placeholder="סכום (הוצאה=שלילי)" />
+        <input type="text" id="tx-note" placeholder="פתק" />
+        <label><input type="checkbox" id="tx-cleared" /> נפרע</label>
+        <button type="button" id="tx-split-toggle">פצל תנועה</button>
+        <button type="submit">הוסף תנועה</button>
+      </form>
+      <div id="tx-split-rows" class="split-rows" hidden>
+        <div id="tx-split-rows-list"></div>
+        <button type="button" id="tx-split-add-row" class="small-btn">+ שורת פיצול</button>
+        <span id="tx-split-total"></span>
+      </div>
+
+      <table class="tx-table">
+        <thead>
+          <tr><th>תאריך</th><th>חשבון</th><th>נהנה</th><th>קטגוריה</th><th>סכום</th><th>נפרע</th><th>פתק</th><th></th></tr>
+        </thead>
+        <tbody id="tx-table-body"></tbody>
+      </table>
+
+      <div id="reconcile-modal" class="modal-backdrop" hidden>
+        <div class="modal">
+          <h3>התאמת חשבון</h3>
+          <div class="inline-form">
+            <label>תאריך דף חשבון: <input type="date" id="reconcile-date" /></label>
+            <label>יתרה בדף חשבון: <input type="number" step="0.01" id="reconcile-balance" /></label>
+          </div>
+          <table class="tx-table">
+            <thead><tr><th>נפרע?</th><th>תאריך</th><th>נהנה</th><th>סכום</th></tr></thead>
+            <tbody id="reconcile-list"></tbody>
+          </table>
+          <div id="reconcile-diff" class="reconcile-diff"></div>
+          <div class="inline-form">
+            <button id="reconcile-finish" type="button">סיים התאמה</button>
+            <button id="reconcile-cancel" type="button" class="small-btn">ביטול</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- תקצוב חודשי -->
+    <section id="view-budget" class="view">
+      <div class="income-row">
+        <label>הכנסה החודש: <input type="number" id="income-input" step="0.01" /></label>
+        <label><input type="checkbox" id="reset-available-input" /> אפס יתרה לא מתוקצבת מהחודש הקודם</label>
+        <span>יתרה לא מתוקצבת: <strong id="to-budget-value"></strong></span>
+        <button id="copy-prev-budget">העתק תקציב מהחודש הקודם</button>
+      </div>
+      <table class="budget-table">
+        <thead><tr><th>קטגוריה</th><th>מתוקצב</th><th>בפועל</th><th>יתרה</th><th>הערה</th></tr></thead>
+        <tbody id="budget-table-body"></tbody>
+      </table>
+    </section>
+
+    <!-- ניהול קטגוריות -->
+    <section id="view-categories" class="view">
+      <form id="group-form" class="inline-form">
+        <input type="text" id="group-name" placeholder="שם קבוצה חדשה" required />
+        <button type="submit">הוסף קבוצה</button>
+      </form>
+      <div id="categories-list"></div>
+    </section>
+
+    <!-- כללים -->
+    <section id="view-rules" class="view">
+      <form id="rule-form" class="rule-form">
+        <label>התאמה:
+          <select id="rule-conditions-op">
+            <option value="and">כל התנאים מתקיימים</option>
+            <option value="or">לפחות תנאי אחד מתקיים</option>
+          </select>
+        </label>
+        <h4>תנאים</h4>
+        <div id="rule-conditions-list"></div>
+        <button type="button" id="rule-add-condition" class="small-btn">+ הוסף תנאי</button>
+
+        <h4>פעולות</h4>
+        <div id="rule-actions-list"></div>
+        <button type="button" id="rule-add-action" class="small-btn">+ הוסף פעולה</button>
+
+        <button type="submit">שמור כלל</button>
+      </form>
+
+      <h3>כללים קיימים</h3>
+      <div id="rules-list"></div>
+      <button id="apply-rules-btn" type="button">הרץ את כל הכללים על תנועות קיימות</button>
+    </section>
+
+    <!-- תנועות מתוזמנות -->
+    <section id="view-schedules" class="view">
+      <form id="schedule-form" class="schedule-form">
+        <div class="inline-form">
+          <select id="schedule-account" required></select>
+          <input type="text" id="schedule-payee-new" placeholder="נהנה" />
+          <select id="schedule-category" required></select>
+          <input type="number" id="schedule-amount" step="0.01" placeholder="סכום (הוצאה=שלילי)" required />
+          <input type="text" id="schedule-note" placeholder="פתק" />
+        </div>
+        <div class="inline-form">
+          <label>תדירות:
+            <select id="schedule-frequency">
+              <option value="daily">יומי</option>
+              <option value="weekly">שבועי</option>
+              <option value="monthly" selected>חודשי</option>
+              <option value="yearly">שנתי</option>
+            </select>
+          </label>
+          <label>כל: <input type="number" id="schedule-interval" value="1" min="1" style="width:50px" /></label>
+          <label>תאריך התחלה: <input type="date" id="schedule-start" required /></label>
+          <label>התאמת סופ"ש:
+            <select id="schedule-weekend-adjust">
+              <option value="none">ללא</option>
+              <option value="before">קדם ליום עסקים קודם</option>
+              <option value="after">דחה ליום עסקים הבא</option>
+            </select>
+          </label>
+        </div>
+        <div class="inline-form">
+          <label>סיום:
+            <select id="schedule-end-mode">
+              <option value="never">לעולם לא</option>
+              <option value="after_n">אחרי מספר הופעות</option>
+              <option value="on_date">בתאריך</option>
+            </select>
+          </label>
+          <input type="number" id="schedule-end-occurrences" placeholder="מספר הופעות" style="width:110px" hidden />
+          <input type="date" id="schedule-end-date" hidden />
+          <button type="submit">הוסף תזמון</button>
+        </div>
+      </form>
+      <div id="schedules-list"></div>
+    </section>
+
+    <!-- דוחות -->
+    <section id="view-reports" class="view">
+      <nav class="report-tabs">
+        <button class="report-tab-btn active" data-report="networth">שווי נטו</button>
+        <button class="report-tab-btn" data-report="cashflow">תזרים מזומנים</button>
+        <button class="report-tab-btn" data-report="spending">הוצאות לפי קטגוריה</button>
+        <button class="report-tab-btn" data-report="calendar">לוח שנה</button>
+        <button class="report-tab-btn" data-report="sankey">תרשים זרימה (Sankey)</button>
+      </nav>
+
+      <div id="report-networth" class="report-panel active">
+        <canvas id="networth-chart" width="700" height="250"></canvas>
+      </div>
+
+      <div id="report-cashflow" class="report-panel">
+        <canvas id="cashflow-chart" width="700" height="250"></canvas>
+        <div class="legend">
+          <span class="legend-dot" style="background:#0ca30c"></span> הכנסה
+          <span class="legend-dot" style="background:#d03b3b"></span> הוצאה
+        </div>
+      </div>
+
+      <div id="report-spending" class="report-panel">
+        <div class="inline-form">
+          <label>מתאריך: <input type="date" id="spending-from" /></label>
+          <label>עד תאריך: <input type="date" id="spending-to" /></label>
+        </div>
+        <canvas id="spending-chart" width="700" height="300"></canvas>
+      </div>
+
+      <div id="report-calendar" class="report-panel">
+        <div id="calendar-grid" class="calendar-grid"></div>
+        <div id="calendar-day-detail" class="calendar-day-detail"></div>
+      </div>
+
+      <div id="report-sankey" class="report-panel">
+        <canvas id="sankey-chart" width="700" height="400"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script src="data/seed.js"></script>
+  <script src="js/core/uid.js"></script>
+  <script src="js/core/dates.js"></script>
+  <script src="js/core/storage.js"></script>
+
+  <script src="js/domain/state.js"></script>
+  <script src="js/domain/categories.js"></script>
+  <script src="js/domain/accounts.js"></script>
+  <script src="js/domain/payees.js"></script>
+  <script src="js/domain/rules.js"></script>
+  <script src="js/domain/transactions.js"></script>
+  <script src="js/domain/budget.js"></script>
+  <script src="js/domain/schedules.js"></script>
+  <script src="js/domain/reports.js"></script>
+
+  <script src="js/ui/util.js"></script>
+  <script src="js/ui/components/dropdownMenu.js"></script>
+  <script src="js/ui/components/modal.js"></script>
+  <script src="js/ui/charts/canvasCharts.js"></script>
+  <script src="js/ui/dashboardView.js"></script>
+  <script src="js/ui/accountsView.js"></script>
+  <script src="js/ui/schedulesView.js"></script>
+  <script src="js/ui/registerView.js"></script>
+  <script src="js/ui/budgetView.js"></script>
+  <script src="js/ui/categoriesView.js"></script>
+  <script src="js/ui/rulesView.js"></script>
+  <script src="js/ui/reportsView.js"></script>
+  <script src="js/ui/nav.js"></script>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
